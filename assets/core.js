@@ -112,13 +112,26 @@
         list(index?.models).forEach(m=>add(m,'index'));
         list(names).forEach(m=>add(m,'names'));
         list(runtime).forEach(m=>add(m,'runtime'));
-        return [...map.values()].map(m => {
+        const result = [...map.values()].map(m => {
             const meta=list(index?.models).find(x=>x.Name===m.Name) || {};
             const kind=meta.kind || (m.BufferStyle ? 'buffer' : m.Type==='Sub' ? 'submodel' : 'model');
+            let profiles=list(meta.profiles), mapping=meta.mapping || 'unknown';
+            // Auto-created channel-output models may not be in model-overlays.json.
+            // Join their live API range to the same read-only string profiles.
+            const start=Number(m.StartChannel)-1,count=Number(m.ChannelCount);
+            if(!profiles.length && m.Type==='Channel' && start>=0 && count>0){
+                profiles=list(index?.profiles).filter(p=>start<=p.end && start+count-1>=p.start).map(p=>p.id);
+                mapping='range';
+            }
             return {...m,...meta,kind,channels:Number(m.ChannelCountPerNode || meta.channels || 3),
                 label:meta.DisplayName || m.DisplayName || m.Name, parent:meta.Parent || m.Parent || '',
-                profiles:list(meta.profiles),mapping:meta.mapping || 'unknown',disabled:m.Name.includes(',')};
-        }).sort((a,b)=>a.Name.localeCompare(b.Name,undefined,{numeric:true}));
+                profiles,mapping,disabled:m.Name.includes(',')};
+        });
+        const byName=new Map(result.map(m=>[m.Name,m]));
+        for(const m of result)if(!m.profiles.length && m.parent && byName.has(m.parent)){
+            m.profiles=byName.get(m.parent).profiles;m.mapping='parent';
+        }
+        return result.sort((a,b)=>a.Name.localeCompare(b.Name,undefined,{numeric:true}));
     }
     function groupCommands(models, build) {
         const buckets=new Map();

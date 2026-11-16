@@ -41,6 +41,10 @@ test('models include lazy subs, groups, buffer views and exact target names',()=
 test('empty and comma-containing targets cannot become a broadcast',()=>{
  assert.throws(()=>C.stopCommand([]));assert.throws(()=>C.stopCommand(['Bad,Name']));assert.throws(()=>C.stopCommand(['--All Models--']));
 });
+test('auto-created models join live channel ranges to output strings',()=>{
+ const models=C.normalizeModels([{Name:'Auto Port',Type:'Channel',StartChannel:301,ChannelCount:40,ChannelCountPerNode:4}],[],{profiles:[{id:8,start:300,end:379,channels:4}],models:[]});
+ assert.deepEqual(models[0].profiles,[8]);assert.equal(models[0].mapping,'range');
+});
 test('color conversions use logical RGB, preserve RGBW, and dim mono targets',()=>{
  assert.equal(C.hsvToHex(0,1,1),'#FF0000');assert.equal(C.hsvToHex(120,1,1),'#00FF00');
  assert.equal(C.targetColor('#FF000080',4),'#FF000080');assert.equal(C.targetColor('#FF000080',3),'#FF0000');

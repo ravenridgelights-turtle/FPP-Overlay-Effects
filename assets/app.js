@@ -133,14 +133,14 @@
     const wheelBase=document.createElement('canvas');wheelBase.width=300;wheelBase.height=300;
     const baseCtx=wheelBase.getContext('2d'),pixels=baseCtx.createImageData(300,300);
     for(let y=0;y<300;y++)for(let x=0;x<300;x++){
-        const dx=x-150,dy=y-150,s=Math.hypot(dx,dy)/143;if(s>1)continue;
+        const dx=x-150,dy=y-150,s=Math.hypot(dx,dy)/135;if(s>1)continue;
         const h=(Math.atan2(dy,dx)*180/Math.PI+90+360)%360;
         const rgb=C.colorParts(C.hsvToHex(h,s,1)),i=(y*300+x)*4;
         pixels.data[i]=rgb[0];pixels.data[i+1]=rgb[1];pixels.data[i+2]=rgb[2];pixels.data[i+3]=255;
     }
     baseCtx.putImageData(pixels,0,0);
     function drawWheel(hex){
-        const hsv=C.hexToHsv(hex),r=143*hsv.s,a=(hsv.h-90)*Math.PI/180,x=150+Math.cos(a)*r,y=150+Math.sin(a)*r;
+        const hsv=C.hexToHsv(hex),r=135*hsv.s,a=(hsv.h-90)*Math.PI/180,x=150+Math.cos(a)*r,y=150+Math.sin(a)*r;
         ctx.clearRect(0,0,300,300);ctx.drawImage(wheelBase,0,0);ctx.beginPath();ctx.arc(x,y,9,0,Math.PI*2);ctx.strokeStyle='#111';ctx.lineWidth=6;ctx.stroke();ctx.strokeStyle='white';ctx.lineWidth=3;ctx.stroke();
         wheel.setAttribute('aria-valuenow',String(Math.round(hsv.h)));wheel.setAttribute('aria-valuetext',hex+', hue '+Math.round(hsv.h)+'°, saturation '+Math.round(hsv.s*100)+'%. Left/right changes hue; up/down changes saturation.');
     }
@@ -148,7 +148,7 @@
     function pickWheel(event){
         const rect=wheel.getBoundingClientRect(),x=(event.clientX-rect.left)*300/rect.width-150,y=(event.clientY-rect.top)*300/rect.height-150;
         const hsv=C.hexToHsv(selectedColor()),white=C.colorParts(selectedColor())[3];
-        const hex=C.hsvToHex((Math.atan2(y,x)*180/Math.PI+450)%360,Math.min(1,Math.hypot(x,y)/143),hsv.v || 1);
+        const hex=C.hsvToHex((Math.atan2(y,x)*180/Math.PI+450)%360,Math.min(1,Math.hypot(x,y)/135),hsv.v || 1);
         setColor(selectedColor().length===9?hex+C.colorHex([white]).slice(1):hex);
     }
     wheel.addEventListener('pointerdown',e=>{if(wheel.getAttribute('aria-disabled')==='true')return;const r=wheel.getBoundingClientRect();if(Math.hypot(e.clientX-r.left-r.width/2,e.clientY-r.top-r.height/2)>r.width/2)return;dragging=true;wheel.setPointerCapture(e.pointerId);pickWheel(e);});
