@@ -1,0 +1,57 @@
+{
+  "source": "Simulated responses following FalconChristmas/fpp v10.4 commit 123b8ca089b98a54f7f5c0b7ee7b72ed18217f21. Not a capture from physical hardware.",
+  "models": [
+    {"Name":"Mega Tree","Type":"Channel","ChannelCountPerNode":3,"ColorOrder":"RGB","isActive":0,"effectRunning":false,"width":32,"height":100},
+    {"Name":"Roofline","Type":"Channel","ChannelCountPerNode":4,"ColorOrder":"RGBW","isActive":0,"effectRunning":false,"width":200,"height":1},
+    {"Name":"Arch 1","Type":"Channel","ChannelCountPerNode":3,"ColorOrder":"RGB","isActive":0,"effectRunning":false},
+    {"Name":"Porch Dimmer","Type":"Channel","ChannelCountPerNode":1,"ColorOrder":"W","isActive":0,"effectRunning":false},
+    {"Name":"Wrong RGBW","Type":"Channel","ChannelCountPerNode":3,"isActive":0,"effectRunning":false}
+  ],
+  "names":["Mega Tree","Roofline","Arch 1","Porch Dimmer","Wrong RGBW","Mega Tree_Eyes","Mega Tree_Star","All RGB Props","Tree Polar View"],
+  "index": {
+    "models":[
+      {"Name":"Mega Tree","kind":"model","ChannelCountPerNode":3,"profiles":[0],"mapping":"range"},
+      {"Name":"Roofline","kind":"model","ChannelCountPerNode":4,"profiles":[1],"mapping":"range"},
+      {"Name":"Arch 1","kind":"model","ChannelCountPerNode":3,"profiles":[2],"mapping":"range"},
+      {"Name":"Porch Dimmer","kind":"model","ChannelCountPerNode":1,"profiles":[3],"mapping":"range"},
+      {"Name":"Wrong RGBW","kind":"model","ChannelCountPerNode":3,"profiles":[1],"mapping":"range"},
+      {"Name":"Mega Tree_Eyes","DisplayName":"Eyes","Parent":"Mega Tree","Type":"Sub","kind":"submodel","ChannelCountPerNode":3,"profiles":[0],"mapping":"grid"},
+      {"Name":"Mega Tree_Star","DisplayName":"Star","Parent":"Mega Tree","Type":"Sub","kind":"submodel","ChannelCountPerNode":3,"profiles":[0],"mapping":"grid"},
+      {"Name":"All RGB Props","kind":"group","ChannelCountPerNode":3,"profiles":[0,2],"mapping":"grid"},
+      {"Name":"Tree Polar View","kind":"buffer","BufferStyle":"Polar","ChannelCountPerNode":3,"profiles":[0],"mapping":"grid"}
+    ],
+    "profiles":[
+      {"id":0,"port":1,"receiver":"A","string":1,"description":"Mega tree","protocol":"ws2811","order":"GRB","channels":3},
+      {"id":1,"port":2,"receiver":"B","string":1,"description":"RGBW roof","protocol":"sk6812","order":"WRGB","channels":4},
+      {"id":2,"port":3,"receiver":"A","string":2,"description":"Arch","protocol":"ws2811","order":"RGB","channels":3},
+      {"id":3,"port":4,"receiver":"A","string":1,"description":"Porch","protocol":"ws2811","order":"W","channels":1}
+    ]
+  },
+  "schemas": [
+    {"name":"WLED - Chase","args":[
+      {"name":"BufferMapping","description":"Buffer Mapping","type":"string","contents":["Horizontal","Vertical"]},
+      {"name":"brightness","description":"Brightness","type":"range","min":0,"max":255,"default":"128"},
+      {"name":"Speed","description":"Speed","type":"range","min":0,"max":255,"default":"128"},
+      {"name":"Intensity","description":"Intensity","type":"range","min":0,"max":255,"default":"128"},
+      {"name":"Reverse","description":"Reverse","type":"bool","default":"0"},
+      {"name":"palette","description":"Palette","type":"string","contents":["Default","Rainbow","Party"],"default":"Default"},
+      {"name":"color1","description":"Color 1","type":"color","default":"#FF6600"},
+      {"name":"color2","description":"Color 2","type":"color","default":"#0000FF"},
+      {"name":"color3","description":"Color 3","type":"color","default":"#000000"}
+    ]},
+    {"name":"WLED - Fire 2012","args":[
+      {"name":"brightness","description":"Brightness","type":"range","min":0,"max":255,"default":"128"},
+      {"name":"Cooling","description":"Cooling","type":"range","min":0,"max":255,"default":"55"},
+      {"name":"Sparking","description":"Sparking","type":"range","min":0,"max":255,"default":"120"}
+    ]},
+    {"name":"Text","args":[
+      {"name":"Color","description":"Color","type":"color","default":"#FF0000"},
+      {"name":"Font","description":"Font","type":"string","contentListUrl":"api/overlays/fonts","allowBlanks":false},
+      {"name":"FontSize","description":"Font Size","type":"range","min":4,"max":100,"default":"18"},
+      {"name":"Text","description":"Text","type":"string"}
+    ]},
+    {"name":"Bars","args":[{"name":"Direction","type":"string","contents":["Up","Down","Left","Right"]},{"name":"time","description":"Time (ms)","type":"int","min":1,"max":60000,"default":"2000"},{"name":"Color1","description":"Color 1","type":"color","default":"#00FF00"}]},
+    {"name":"WLED - Slow","args":[]},
+    {"name":"WLED - Fast","args":[{"name":"color1","description":"Color 1","type":"color","default":"#00FF00"}]}
+  ]
+}

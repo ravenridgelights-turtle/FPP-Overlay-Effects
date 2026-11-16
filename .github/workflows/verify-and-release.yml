@@ -1,0 +1,63 @@
+name: Verify and release
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: overlay-effects-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - run: npm ci --ignore-scripts
+      - name: JavaScript contracts
+        run: npm test
+      - name: PHP discovery and menu integration
+        run: |
+          find . -name '*.php' -not -path './node_modules/*' -print0 | xargs -0 -n1 php -l
+          php tests/model-index.php
+      - name: Install browser
+        run: npx playwright install --with-deps chromium
+      - name: Desktop, phone, and Status integration
+        run: npm run test:ui
+      - name: Save interface previews
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: interface-previews
+          path: test-results/*.png
+          if-no-files-found: ignore
+  release:
+    needs: verify
+    if: github.ref == 'refs/heads/main' && (github.event_name == 'workflow_dispatch' || contains(github.event.head_commit.message, '[release]'))
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+      - name: Package and publish
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          version="$(tr -d '\r\n' < VERSION)"
+          [[ "$version" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]
+          tag="v$version"
+          if gh release view "$tag" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+            echo "Release $tag already exists. Bump VERSION for a new release."
+            exit 0
+          fi
+          mkdir -p dist
+          git archive --format=zip --prefix=FPP-Overlay-Effects/ --output="dist/FPP-Overlay-Effects-$version.zip" HEAD
+          cd dist
+          sha256sum "FPP-Overlay-Effects-$version.zip" > SHA256SUMS.txt
+          cd ..
+          gh release create "$tag" --repo "$GITHUB_REPOSITORY" --target "$GITHUB_SHA" --title "FPP Overlay Effects $version" --notes-file "docs/releases/$tag.md" "dist/FPP-Overlay-Effects-$version.zip" dist/SHA256SUMS.txt

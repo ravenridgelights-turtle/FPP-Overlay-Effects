@@ -1,0 +1,37 @@
+{
+  "repoName": "FPP-Overlay-Effects",
+  "name": "FPP Overlay Effects",
+  "author": "ravenridgelights-turtle; based on Adam Coulombe’s fpp-WledEffects",
+  "description": "WLED-style controls for FPP native overlay effects: color wheel, RGB/RGBW support, model/submodel/group selection, presets, and active-effect bubbles with Stop buttons on Status. Built for FPP 10.4 and later.",
+  "homeURL": "https://github.com/ravenridgelights-turtle/FPP-Overlay-Effects",
+  "srcURL": "https://github.com/ravenridgelights-turtle/FPP-Overlay-Effects.git",
+  "bugURL": "https://github.com/ravenridgelights-turtle/FPP-Overlay-Effects/issues",
+  "iconURL": "https://raw.githubusercontent.com/ravenridgelights-turtle/FPP-Overlay-Effects/main/icon.png",
+  "allowUpdates": 1,
+  "releaseNotesStyle": "gitRelease",
+  "versions": [
+    {
+      "minFPPVersion": "10.4",
+      "maxFPPVersion": "0",
+      "branch": "main",
+      "sha": ""
+    }
+  ],
+  "privacy": {
+    "summary": "Controls native effects on this FPP. Reads local model and pixel-string configuration. No telemetry or third-party services.",
+    "sends": [
+      {
+        "to": "FPP systems explicitly selected for MultiSync",
+        "what": "Selected overlay commands and arguments",
+        "why": "Mirror a look on matching remote model names when MultiSync is enabled",
+        "alwaysOn": false
+      }
+    ],
+    "collects": [],
+    "sensors": [],
+    "remoteAccess": "none",
+    "systemChanges": [],
+    "closedCode": false,
+    "other": "Presets, selections, favorites and effect values are saved in config/plugin.FPP-Overlay-Effects.json on this FPP. Uses the FPP menu hook for Status bubbles; does not patch FPP files or change output configurations."
+  }
+}
