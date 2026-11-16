@@ -8,7 +8,7 @@ const clone=x=>JSON.parse(JSON.stringify(x));
 const server=http.createServer(async(req,res)=>{
  const url=new URL(req.url,'http://localhost'),p=url.pathname.replace(/^\/proxy\/remote\//,'/');
  const json=(v,status=200)=>{res.writeHead(status,{'Content-Type':'application/json'});res.end(JSON.stringify(v));};
- const text=(v,type='text/html')=>{res.writeHead(200,{'Content-Type':type});res.end(v);};
+ const text=(v,type='text/html')=>{res.writeHead(200,{'Content-Type':type+'; charset=utf-8'});res.end(v);};
  if(p==='/api/overlays/models')return json(fixture.models);
  if(p==='/api/models')return json(fixture.names);
  if(p==='/api/overlays/running')return json(running);
@@ -56,7 +56,7 @@ let checks=0;function pass(message){checks++;console.log('PASS '+message);}
   await page.locator('#foe-model-search').fill('');await page.getByRole('checkbox',{name:'Select All RGB Props',exact:true}).check();await page.getByRole('checkbox',{name:'Select Tree Polar View',exact:true}).check();pass('Groups and polar buffer views appear alongside models and subs');
   await page.locator('#foe-output-info').evaluate(n=>n.closest('details').open=true);assert.match(await page.locator('#foe-output-info').innerText(),/GRB wire order/);pass('Displays port and virtual-string wire order without swapping command colors');
   await page.locator('#foe-preset-name').fill('Green chase');await page.locator('#foe-preset-save').click();
-  await page.getByRole('button',{name:'Green chase',exact:false}).waitFor();await page.waitForFunction(()=>document.getElementById('foe-save-status').textContent.includes('Saved on this FPP'));assert.equal(config.presets[0].parameters.color1,'#00FF00');pass('Presets persist through the native FPP config-file API');
+  await page.getByRole('button',{name:'Load preset Green chase',exact:true}).waitFor();await page.waitForFunction(()=>document.getElementById('foe-save-status').textContent.includes('Saved on this FPP'));assert.equal(config.presets[0].parameters.color1,'#00FF00');pass('Presets persist through the native FPP config-file API');
   await page.screenshot({path:path.join(root,'desktop.png'),fullPage:true});
   await page.locator('#foe-clear-selection').click();await page.getByRole('checkbox',{name:'Select Roofline',exact:true}).check();await page.getByRole('button',{name:'Solid Color',exact:true}).click();await page.getByRole('checkbox',{name:'Select Mega Tree',exact:true}).check();
   await page.locator('#foe-white').evaluate(n=>{n.value='90';n.dispatchEvent(new Event('input',{bubbles:true}));n.dispatchEvent(new Event('change',{bubbles:true}));});

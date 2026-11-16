@@ -94,7 +94,7 @@
         state.armed=true;const label=state.config.effect;
         try{
             await queue.enqueue(async()=>{
-                state.busy++;updateButtons();
+                state.busy++;updateButtons();notice('Applying '+label+'…');
                 try{await sendCommands(commands,hosts);notice(label+' applied to '+models.length+' local target'+(models.length===1?'':'s')+(hosts.length?'; MultiSync commands sent (remote delivery is unacknowledged).':'.'),'success');}
                 finally{state.busy--;updateButtons();}
                 return true;
@@ -108,7 +108,7 @@
         const hosts=state.config.multisync?[...state.config.hosts]:[];
         try{
             await queue.enqueue(async()=>{
-                state.busy++;updateButtons();try{await sendCommands([C.stopCommand(models.map(m=>m.Name))],hosts);notice('Stopped selected overlays and released '+models.length+' local target'+(models.length===1?'':'s')+' back to the show'+(hosts.length?'; remote stop commands sent.':'.'),'success');}finally{state.busy--;updateButtons();}
+                state.busy++;updateButtons();notice('Stopping selected overlays…');try{await sendCommands([C.stopCommand(models.map(m=>m.Name))],hosts);notice('Stopped selected overlays and released '+models.length+' local target'+(models.length===1?'':'s')+' back to the show'+(hosts.length?'; remote stop commands sent.':'.'),'success');}finally{state.busy--;updateButtons();}
             },'stop');
             await pollModels();
         }catch(e){notice('Could not finish stopping selected overlays: '+e.message,'error');}
@@ -288,7 +288,7 @@
             await chooseEffect(preset.effect,{parameters:preset.parameters || {}});renderModels();updateButtons();
             const missing=C.list(preset.models).length-state.config.models.length;
             notice('Loaded '+preset.name+'. Review the targets and press Apply.'+(missing?' '+missing+' saved target(s) are missing.':''));
-        });load.append(el('small','',preset.effect+' · '+C.list(preset.models).length+' targets'));
+        });load.setAttribute('aria-label','Load preset '+preset.name);load.append(el('small','',preset.effect+' · '+C.list(preset.models).length+' targets'));
             const remove=button('×','',()=>{state.config.presets.splice(i,1);renderPresets();persist();});remove.setAttribute('aria-label','Delete preset '+preset.name);row.append(load,remove);pane.append(row);
         });if(!state.config.presets.length)pane.append(el('p','foe-help','Save a favorite color or effect together with its targets and settings.'));
     }
