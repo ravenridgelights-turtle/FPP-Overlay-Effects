@@ -1,4 +1,4 @@
-/* Active effects only. FPP Overlay Effects, GPL-2.0-or-later. */
+/* Every active overlay, including solid fills. FPP Overlay Effects, GPL-2.0-or-later. */
 (() => {
     'use strict';
     function init(){
@@ -7,7 +7,8 @@
         const remote=document.querySelector('#remoteModeInfo .statusTable');
         if(!player && !remote)return;
         const node=(tag,cls,text)=>{const e=document.createElement(tag);if(cls)e.className=cls;if(text!=null)e.textContent=text;return e;};
-        const panel=node('section');panel.id='foe-status-overlays';panel.hidden=true;panel.setAttribute('aria-label','Running overlay effects');
+        const ACTIVITY='plugin.php?plugin=FPP-Overlay-Effects&page=activity.php&nopage=1';
+        const panel=node('section');panel.id='foe-status-overlays';panel.hidden=true;panel.setAttribute('aria-label','Active overlay effects and fills');
         const heading=node('div','foe-status-heading'),label=node('span','foe-status-label','● Overlay effects');
         const link=node('a','','Effect controls');link.href='plugin.php?plugin=FPP-Overlay-Effects&page=overlay-effects.php';
         const stopAll=node('button','foe-status-stop','Stop shown');stopAll.type='button';stopAll.setAttribute('aria-label','Stop all shown overlay effects');
@@ -19,11 +20,11 @@
         function render(models){
             current=models;panel.hidden=models.length===0;label.textContent='● Overlay effects · '+models.length;
             if(!models.length){bubbles.replaceChildren();hash='';return;}
-            const next=JSON.stringify([models.map(m=>[m.Name,m.effect.name,m.DisplayName]),[...busy]]);if(next===hash)return;hash=next;bubbles.replaceChildren();
+            const next=JSON.stringify([models.map(m=>[m.Name,m.effect.name,m.DisplayName,m.color]),[...busy]]);if(next===hash)return;hash=next;bubbles.replaceChildren();
             models.forEach(m=>{
                 const bubble=node('div','foe-status-bubble'),dot=node('span','foe-status-dot');dot.setAttribute('aria-hidden','true');
                 const text=node('div','foe-status-copy'),prop=node('strong','',m.DisplayName || m.Name),effect=node('span','',m.effect.name.replace(/^WLED\s*[:\-]?\s*/i,''));
-                text.append(prop,effect);
+                text.append(prop,effect);if(m.color){dot.style.backgroundColor=m.color.slice(0,7);dot.title=m.color;effect.textContent+=' · '+m.color;}
                 const stop=node('button','foe-status-stop',busy.has(m.Name)?'Stopping…':'Stop');stop.type='button';stop.disabled=busy.has(m.Name);stop.title='Stop '+m.Name+' and release its overlay';stop.setAttribute('aria-label','Stop overlay on '+m.Name);stop.addEventListener('click',()=>stopTargets([m.Name]));
                 bubble.append(dot,text,stop);bubbles.append(bubble);
             });stopAll.hidden=models.length<2;stopAll.disabled=busy.size>0;
@@ -32,9 +33,12 @@
             clearTimeout(timer);timer=null;if(document.hidden || disposed || controller)return;
             const mine=++generation,request=new AbortController();controller=request;const timeout=setTimeout(()=>request.abort(),6000);
             try{
-                const response=await fetch('api/overlays/running',{credentials:'same-origin',cache:'no-store',signal:request.signal});
-                if(!response.ok)throw new Error('Status unavailable');const data=await response.json();if(!Array.isArray(data))throw new Error('Invalid overlay status');
-                if(mine!==generation)return;mount();render(data.filter(m=>typeof m.Name==='string' && m.Name && m.effect && typeof m.effect.name==='string' && m.effect.name && m.effect.name!=='Stop Effects'));
+                const [live,labels]=await Promise.allSettled([
+                    fetch('api/overlays/models',{credentials:'same-origin',cache:'no-store',signal:request.signal}).then(async r=>{if(!r.ok)throw new Error('Status unavailable');return r.json();}),
+                    fetch(ACTIVITY,{credentials:'same-origin',cache:'no-store',signal:request.signal}).then(async r=>{if(!r.ok)throw new Error('Labels unavailable');return r.json();})
+                ]);
+                if(live.status!=='fulfilled' || !Array.isArray(live.value))throw new Error('Invalid overlay status');
+                if(mine!==generation)return;mount();render(window.FOEStatus.activeOverlays(live.value,labels.status==='fulfilled'?labels.value:null));
             }catch(_){if(mine===generation){render([]);}}
             finally{clearTimeout(timeout);if(controller===request)controller=null;if(mine===generation && !document.hidden && !disposed)timer=setTimeout(read,current.length?3000:8000);}
         }
@@ -47,6 +51,9 @@
                 const raw=await response.text();if(!response.ok)throw new Error(raw.replace(/<[^>]*>/g,'').slice(0,160) || 'Stop command failed.');
                 let data;try{data=JSON.parse(raw);}catch(_){}if(data && /error|fail/i.test(data.Status || ''))throw new Error(data.Message || 'Stop command failed.');
                 if(/^(error\b|no model found\b|could not\b|no command\b)/i.test(raw.trim()))throw new Error(raw);
+                // Forget only these labels after native Stop succeeds. Visibility still
+                // follows the live API if label storage is temporarily unavailable.
+                try{await fetch(ACTIVITY,{method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'clear',models:names}),signal:request.signal});}catch(_){}
             }catch(e){error.textContent=e.name==='AbortError'?'Stop timed out. Check FPP and try again.':'Could not stop overlay: '+e.message;error.hidden=false;}
             finally{clearTimeout(timeout);names.forEach(n=>busy.delete(n));await read();}
         }

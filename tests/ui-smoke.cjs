@@ -3,17 +3,35 @@ const http=require('node:http'),fs=require('node:fs'),path=require('node:path'),
 const {chromium}=require('playwright');
 const fixture=require('./fixtures/fpp-10.4.json'),base=path.resolve(__dirname,'..');
 const root=path.join(base,'test-results');fs.mkdirSync(root,{recursive:true});
-let config=null,commands=[],running=[],failCommand=false,failSystems=false,schemaFail=false;
 const clone=x=>JSON.parse(JSON.stringify(x));
+let config=null,commands=[],running=[],liveModels=clone(fixture.models),activity={version:1,models:{}},failActivity=false,failCommand=false,failSystems=false,schemaFail=false;
+function modelSnapshot(){
+ const models=new Map(liveModels.map(m=>[m.Name,{...m}]));
+ for(const m of running)models.set(m.Name,{...(models.get(m.Name) || {}),...m,isActive:1,effectRunning:true,effectName:m.effect.name});
+ return [...models.values()];
+}
+function applyState(command){
+ if(command.multisyncCommand)return;
+ for(const name of command.args[0].split(',')){
+  let model=liveModels.find(m=>m.Name===name);
+  if(!model){model={...(fixture.index.models.find(m=>m.Name===name) || {}),Name:name};liveModels.push(model);}
+  running=running.filter(m=>m.Name!==name);
+  if(command.command==='Overlay Model Effect' && command.args[2]==='Stop Effects'){model.isActive=0;model.effectRunning=false;delete model.effectName;continue;}
+  model.isActive=String(command.args[1]).includes('Transparent')?(String(command.args[1]).includes('RGB')?3:2):1;
+  model.effectRunning=command.command==='Overlay Model Effect' && !['Text','Image'].includes(command.args[2]);
+  if(model.effectRunning){model.effectName=command.args[2];running.push({Name:name,effect:{name:command.args[2]}});}else delete model.effectName;
+ }
+}
 const server=http.createServer(async(req,res)=>{
  const url=new URL(req.url,'http://localhost'),p=url.pathname.replace(/^\/proxy\/remote\//,'/');
  const json=(v,status=200)=>{res.writeHead(status,{'Content-Type':'application/json'});res.end(JSON.stringify(v));};
  const text=(v,type='text/html')=>{res.writeHead(200,{'Content-Type':type+'; charset=utf-8'});res.end(v);};
- if(p==='/api/overlays/models')return json(fixture.models);
+ if(p==='/api/overlays/models')return json(modelSnapshot());
  if(p==='/api/models')return json(fixture.names);
  if(p==='/api/overlays/running')return json(running);
  if(p==='/api/fppd/multiSyncSystems')return failSystems?json({error:'Discovery unavailable'},503):json({systems:[{hostname:'Yard FPP',address:'192.168.1.41'}]});
  if(p==='/api/overlays/fonts')return json(['DejaVu Sans','Liberation Sans']);
+ if(p==='/api/overlays/images')return json(['snowflake.png']);
  if(p==='/api/overlays/effects')return json(['Stop Effects',...fixture.schemas.map(s=>s.name)]);
  if(p.startsWith('/api/overlays/effects/')){
    const name=decodeURIComponent(p.slice('/api/overlays/effects/'.length));if(name==='WLED - Slow')await new Promise(r=>setTimeout(r,300));
@@ -26,13 +44,18 @@ const server=http.createServer(async(req,res)=>{
  if(p==='/api/command'){
   let b='';for await(const chunk of req)b+=chunk;const c=JSON.parse(b);commands.push(c);
   if(failCommand){res.writeHead(500,{'Content-Type':'text/plain'});return res.end('Simulated command rejection');}
-  if(c.args[2]==='Stop Effects')running=running.filter(m=>!c.args[0].split(',').includes(m.Name));
+  applyState(c);
   return text('Model Effect Started','text/plain'); // FPP 10.4 commands return text, not JSON.
  }
  if(p==='/status'){
-  return text('<!doctype html><html data-bs-theme="dark"><head><meta name="viewport" content="width=device-width,initial-scale=1"><style>body{font:16px system-ui;margin:25px;background:#111218;color:#eee}:root{--bs-body-bg:#111218;--bs-body-color:#eee;--bs-secondary-bg:#24262d;--bs-border-color:#41444c;--fpp-bg-card:#1b1d24;--bs-danger:#ff9399}a{color:#9cc4ff}#playerModeInfo{padding:20px;border:1px solid #41444c;border-radius:12px}#radio-preview{padding:16px;border:1px solid #41444c;border-radius:12px;margin:15px 0;background:#282d33}</style><link rel="stylesheet" href="/assets/status.css"><script>window.handlers=[];window.OnSystemStatusChange=fn=>handlers.push(fn);window.notify=()=>handlers.forEach(fn=>fn());</script><script defer src="/assets/status.js"></script></head><body><h1>Status – Player Mode</h1><p>Interface preview · simulated FPP data</p><div id="playerModeInfo"><div id="playerStatusTop"><div class="playerStatusRow">Player Status: Playing sequence</div><div id="radio-preview">After Show Hours Radio · separate plugin</div><div><button>Play</button> <button>Stop Now</button></div></div></div></body></html>');
+  return text('<!doctype html><html data-bs-theme="dark"><head><meta name="viewport" content="width=device-width,initial-scale=1"><style>body{font:16px system-ui;margin:25px;background:#111218;color:#eee}:root{--bs-body-bg:#111218;--bs-body-color:#eee;--bs-secondary-bg:#24262d;--bs-border-color:#41444c;--fpp-bg-card:#1b1d24;--bs-danger:#ff9399}a{color:#9cc4ff}#playerModeInfo{padding:20px;border:1px solid #41444c;border-radius:12px}#radio-preview{padding:16px;border:1px solid #41444c;border-radius:12px;margin:15px 0;background:#282d33}</style><link rel="stylesheet" href="/assets/status.css"><script>window.handlers=[];window.OnSystemStatusChange=fn=>handlers.push(fn);window.notify=()=>handlers.forEach(fn=>fn());</script><script defer src="/assets/status-state.js"></script><script defer src="/assets/status.js"></script></head><body><h1>Status – Player Mode</h1><p>Interface preview · simulated FPP data</p><div id="playerModeInfo"><div id="playerStatusTop"><div class="playerStatusRow">Player Status: Playing sequence</div><div id="radio-preview">After Show Hours Radio · separate plugin</div><div><button>Play</button> <button>Stop Now</button></div></div></div></body></html>');
  }
  if(p==='/plugin.php'){
+  if(url.searchParams.get('page')==='activity.php'){
+   if(failActivity)return json({error:'Simulated label storage failure'},503);
+   if(req.method==='POST'){let raw='';for await(const chunk of req)raw+=chunk;const change=JSON.parse(raw);for(const name of change.models){if(change.action==='clear')delete activity.models[name];else activity.models[name]={effect:change.effect,color:change.color || '',updatedAt:Date.now()/1000};}}
+   return json(activity);
+  }
   if(url.searchParams.get('page')==='model-index.php')return json(fixture.index);
   const file=url.searchParams.get('file');
   if(file && /^assets\/[a-z-]+\.(css|js)$/.test(file)){return text(fs.readFileSync(path.join(base,file),'utf8'),file.endsWith('.css')?'text/css':'application/javascript');}
@@ -69,15 +92,21 @@ let checks=0;function pass(message){checks++;console.log('PASS '+message);}
   await page.getByRole('button',{name:'Slow',exact:true}).click();await page.getByRole('button',{name:'Fast',exact:true}).click();await page.waitForFunction(()=>document.querySelector('#foe-effect-name').textContent==='Fast' && document.querySelector('#foe-apply').disabled===false);await page.waitForTimeout(350);commands=[];await page.locator('#foe-apply').click();await page.waitForFunction(()=>document.getElementById('foe-notice').dataset.kind==='success');assert.equal(commands[0].args[2],'WLED - Fast');pass('Slow effect descriptions cannot replace a newer selection');
   await page.locator('#foe-live').check();await page.locator('#foe-apply').click();await page.waitForFunction(()=>document.getElementById('foe-notice').dataset.kind==='success');commands=[];
   await page.locator('#foe-hex').fill('#123456');await page.locator('#foe-hex').dispatchEvent('change');await page.locator('#foe-stop').click();await page.waitForTimeout(300);assert.equal(commands.at(-1).args[2],'Stop Effects');assert.equal(commands.filter(c=>c.args[2]!=='Stop Effects').length,0);pass('Stop cancels pending live updates and does not restart lights');
-  failCommand=true;await page.locator('#foe-apply').click();await page.waitForFunction(()=>document.getElementById('foe-notice').dataset.kind==='error');assert.match(await page.locator('#foe-notice').innerText(),/command rejection/);failCommand=false;pass('Failed commands show a visible error');
+  const beforeFailure=JSON.stringify(activity);failCommand=true;await page.locator('#foe-apply').click();await page.waitForFunction(()=>document.getElementById('foe-notice').dataset.kind==='error');assert.match(await page.locator('#foe-notice').innerText(),/command rejection/);assert.equal(JSON.stringify(activity),beforeFailure);failCommand=false;pass('Failed commands show a visible error and never save a false active label');
   await page.locator('#foe-systems').evaluate(n=>n.closest('details').open=true);await page.locator('#foe-multisync').check();assert.equal(await page.locator('#foe-apply').isDisabled(),true);await page.getByRole('checkbox',{name:'Yard FPP (192.168.1.41)',exact:true}).check();commands=[];await page.locator('#foe-apply').click();await page.waitForFunction(()=>document.getElementById('foe-notice').dataset.kind==='success');assert.equal(commands.length,2);assert.equal(commands[0].multisyncCommand,false);assert.equal(commands[1].multisyncCommand,true);assert.equal(commands[1].multisyncHosts,'192.168.1.41');await page.locator('#foe-multisync').uncheck();pass('MultiSync sends locally plus only explicitly selected remote hosts');
   await page.locator('#foe-live').uncheck();await page.setViewportSize({width:390,height:844});await page.locator('.foe-mobile-tabs [data-panel="colors"]').click();assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),true);await page.screenshot({path:path.join(root,'mobile.png'),fullPage:true});pass('Phone layout fits without horizontal scrolling');
   const prior=commands.length;failSystems=true;await page.goto(origin+'/proxy/remote/plugin.php');await page.getByText('FPP connected',{exact:true}).waitFor();assert.equal(commands.length,prior);pass('Local controls survive MultiSync-discovery failure and work behind an FPP proxy prefix');failSystems=false;
   schemaFail=true;await page.locator('.foe-mobile-tabs [data-panel="effects"]').click();await page.getByRole('button',{name:'Chase',exact:true}).click();await page.waitForFunction(()=>document.getElementById('foe-notice').dataset.kind==='error');assert.equal(await page.locator('#foe-apply').isDisabled(),true);schemaFail=false;pass('Malformed effect descriptions cannot be sent');
-  running=[];await page.setViewportSize({width:1280,height:700});await page.goto(origin+'/status');await page.waitForTimeout(150);assert.equal(await page.locator('#foe-status-overlays').isVisible(),false);pass('Empty Status has no bubbles, heading, or box');
-  running=[{Name:'Mega Tree',effect:{name:'WLED - Chase'}},{Name:'Mega Tree_Eyes',effect:{name:'Text'}},{Name:'Roofline',effect:{name:'WLED - Fire 2012'}}];await page.evaluate(()=>window.notify());await page.reload();await page.locator('.foe-status-bubble').first().waitFor();assert.equal(await page.locator('.foe-status-bubble').count(),3);assert.equal(await page.locator('#radio-preview').isVisible(),true);await page.screenshot({path:path.join(root,'status-bubbles.png'),fullPage:true});pass('Status shows compact prop/effect bubbles alongside other plugins and sequences');
-  commands=[];await page.getByRole('button',{name:'Stop overlay on Mega Tree_Eyes',exact:true}).click();await page.waitForFunction(()=>document.querySelectorAll('.foe-status-bubble').length===2);assert.deepEqual(commands[0].args,['Mega Tree_Eyes','Enabled','Stop Effects']);assert.equal(running.length,2);pass('Per-bubble Stop removes only that target');
-  await page.getByRole('button',{name:'Stop all shown overlay effects'}).click();await page.waitForFunction(()=>document.getElementById('foe-status-overlays').hidden);assert.equal(running.length,0);assert.equal(await page.locator('#radio-preview').isVisible(),true);pass('Last stopped effect hides the entire bubble panel and leaves radio/player controls alone');
+  running=[];liveModels=clone(fixture.models);await page.setViewportSize({width:1280,height:700});await page.goto(origin+'/status');await page.waitForTimeout(150);assert.equal(await page.locator('#foe-status-overlays').isVisible(),false);pass('Saved history with no enabled overlays shows no bubbles, heading, or box');
+  const control=await context.newPage();await control.goto(origin+'/plugin.php');await control.getByText('FPP connected',{exact:true}).waitFor();await control.locator('#foe-clear-selection').click();await control.getByRole('checkbox',{name:'Select Roofline',exact:true}).check();await control.getByRole('button',{name:'Solid Color',exact:true}).click();await control.locator('#foe-hex').fill('#FF0000');await control.locator('#foe-hex').dispatchEvent('change');await control.locator('#foe-apply').click();await control.waitForFunction(()=>document.getElementById('foe-notice').dataset.kind==='success');
+  assert.equal(running.length,0);assert.equal(activity.models.Roofline.effect,'Solid Color');await page.reload();await page.getByRole('button',{name:'Stop overlay on Roofline',exact:true}).waitFor();assert.match(await page.locator('.foe-status-bubble').innerText(),/Solid Color/);pass('Apply a solid color, then open home: its bubble appears without any running animation');
+  await control.locator('#foe-clear-selection').click();await control.getByRole('checkbox',{name:'Select Mega Tree',exact:true}).check();await control.getByRole('button',{name:'Text',exact:true}).click();await control.getByRole('textbox',{name:'Text',exact:true}).fill('Finch Landing');await control.locator('#foe-apply').click();await control.waitForFunction(()=>document.getElementById('foe-notice').dataset.kind==='success');await page.reload();await page.waitForFunction(()=>document.querySelectorAll('.foe-status-bubble').length===2);assert.match(await page.locator('.foe-status-bubble').filter({hasText:'Mega Tree'}).innerText(),/Text/);assert.equal(running.length,0);pass('Static Text retains its effect label after navigation');
+  await control.locator('#foe-clear-selection').click();await control.getByRole('checkbox',{name:'Select Arch 1',exact:true}).check();await control.getByRole('button',{name:'Image',exact:true}).click();await control.getByRole('combobox',{name:'Image',exact:true}).waitFor();await control.locator('#foe-apply').click();await control.waitForFunction(()=>document.getElementById('foe-notice').dataset.kind==='success');await page.reload();await page.waitForFunction(()=>document.querySelectorAll('.foe-status-bubble').length===3);assert.match(await page.locator('.foe-status-bubble').filter({hasText:'Arch 1'}).innerText(),/Image/);pass('Static Image retains its effect label after navigation');await control.close();
+  running=[{Name:'Mega Tree_Eyes',effect:{name:'WLED - Chase'}},{Name:'All RGB Props',effect:{name:'WLED - Fire 2012'}}];await page.reload();await page.waitForFunction(()=>document.querySelectorAll('.foe-status-bubble').length===5);assert.equal(await page.locator('#radio-preview').isVisible(),true);await page.screenshot({path:path.join(root,'status-bubbles.png'),fullPage:true});pass('Models, lazy submodels, groups, animations and static looks share the compact Status bubbles');
+  commands=[];await page.getByRole('button',{name:'Stop overlay on Roofline',exact:true}).click();await page.waitForFunction(()=>document.querySelectorAll('.foe-status-bubble').length===4);assert.deepEqual(commands[0].args,['Roofline','Enabled','Stop Effects']);assert.equal(liveModels.find(m=>m.Name==='Roofline').isActive,0);assert.equal(running.length,2);pass('A solid-fill bubble Stop releases only that target and leaves other effects running');
+  await page.getByRole('button',{name:'Stop all shown overlay effects'}).click();await page.waitForFunction(()=>document.getElementById('foe-status-overlays').hidden);assert.equal(running.length,0);assert.equal(await page.locator('#radio-preview').isVisible(),true);pass('Stopping all static and animated looks hides the entire panel without affecting radio/player controls');
+  liveModels.find(m=>m.Name==='Roofline').isActive=1;delete activity.models.Roofline;await page.reload();await page.getByRole('button',{name:'Stop overlay on Roofline',exact:true}).waitFor();assert.match(await page.locator('.foe-status-bubble').innerText(),/Solid \/ static overlay/);pass('A solid fill started before the update appears without being reapplied');
+  failActivity=true;await page.reload();await page.getByRole('button',{name:'Stop overlay on Roofline',exact:true}).waitFor();assert.equal(await page.locator('.foe-status-bubble').count(),1);await page.getByRole('button',{name:'Stop overlay on Roofline',exact:true}).click();await page.waitForFunction(()=>document.getElementById('foe-status-overlays').hidden);failActivity=false;pass('Label-storage failure cannot hide active fills or prevent Stop');
   assert.deepEqual(errors,[]);pass('No uncaught browser errors');
   console.log(checks+' browser integration checks passed.');
  }finally{await browser.close();server.close();}

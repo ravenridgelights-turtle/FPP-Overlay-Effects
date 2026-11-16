@@ -2,7 +2,7 @@
   "repoName": "FPP-Overlay-Effects",
   "name": "FPP Overlay Effects",
   "author": "ravenridgelights-turtle; based on Adam Coulombe’s fpp-WledEffects",
-  "description": "WLED-style controls for FPP native overlay effects: color wheel, RGB/RGBW support, model/submodel/group selection, presets, and active-effect bubbles with Stop buttons on Status. Built for FPP 10.4 and later.",
+  "description": "WLED-style controls for FPP native overlay effects: color wheel, RGB/RGBW support, model/submodel/group selection, presets, and active-look bubbles for solid fills, Text/Image and animations with Stop buttons on Status. Built for FPP 10.4 and later.",
   "homeURL": "https://github.com/ravenridgelights-turtle/FPP-Overlay-Effects",
   "srcURL": "https://github.com/ravenridgelights-turtle/FPP-Overlay-Effects.git",
   "bugURL": "https://github.com/ravenridgelights-turtle/FPP-Overlay-Effects/issues",
@@ -32,6 +32,6 @@
     "remoteAccess": "none",
     "systemChanges": [],
     "closedCode": false,
-    "other": "Presets, selections, favorites and effect values are saved in config/plugin.FPP-Overlay-Effects.json on this FPP. Uses the FPP menu hook for Status bubbles; does not patch FPP files or change output configurations."
+    "other": "Presets, selections, favorites and effect values are saved in config/plugin.FPP-Overlay-Effects.json on this FPP. Last successful look labels use config/plugin.FPP-Overlay-Effects.activity.json; live FPP state determines Status visibility. Uses the FPP menu hook for Status bubbles; does not patch FPP files or change output configurations."
   }
 }

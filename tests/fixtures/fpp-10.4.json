@@ -52,6 +52,7 @@
     ]},
     {"name":"Bars","args":[{"name":"Direction","type":"string","contents":["Up","Down","Left","Right"]},{"name":"time","description":"Time (ms)","type":"int","min":1,"max":60000,"default":"2000"},{"name":"Color1","description":"Color 1","type":"color","default":"#00FF00"}]},
     {"name":"WLED - Slow","args":[]},
-    {"name":"WLED - Fast","args":[{"name":"color1","description":"Color 1","type":"color","default":"#00FF00"}]}
+    {"name":"WLED - Fast","args":[{"name":"color1","description":"Color 1","type":"color","default":"#00FF00"}]},
+    {"name":"Image","args":[{"name":"Scaling","type":"string","contents":["Scale to Fit","Crop to Fill","Stretch","None"],"default":"Scale to Fit"},{"name":"Position","type":"string","contents":["Center","Right to Left"]},{"name":"Speed","description":"Scroll Speed","type":"range","min":0,"max":200,"default":"10"},{"name":"Duration","description":"Duration (0 = leave up)","type":"int","min":0,"max":2000,"default":"0"},{"name":"Image","description":"Image","type":"string","contentListUrl":"api/overlays/images","allowBlanks":false}]}
   ]
 }

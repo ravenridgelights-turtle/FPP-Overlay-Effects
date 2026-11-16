@@ -8,7 +8,7 @@ A WLED-style interface for **FPP’s own native overlay effects**, rebuilt for *
 - RGB, RGBW white-channel control, and an intensity control for single-channel targets.
 - Local port / virtual-string / protocol / wire-order information, including smart-receiver banks.
 - Favorites and named presets stored on the FPP, shared between browsers.
-- Compact **Status-page bubbles: prop name + running effect + Stop**. Nothing is shown when no effects are running.
+- Compact **Status-page bubbles: prop name + active look + Stop**, including solid fills, Text, Image, and animations. Nothing is shown when all overlays are released.
 - Optional native MultiSync commands to explicitly selected FPP systems.
 
 ## Install
@@ -58,17 +58,17 @@ RGB and RGBW models may be selected together: color arguments and solid fills ar
 
 FPP generally cannot inspect the physical pixel protocol or wire order of a separate network controller. Configure those on that controller. RGBW color arguments are passed to the native FPP effect engine; procedural palettes and effects determine their own use of white.
 
-### Running-effect bubbles on Status
+### Active-look bubbles on Status
 
-The normal FPP Status page shows one compact bubble per running overlay: **target name, effect name, Stop**. Bubbles support models, submodels, and groups. **Stop shown** appears when several effects are listed. Stopping the last effect hides the entire panel; there is no empty heading or placeholder. The display works while a sequence is running and coexists with After Show Hours Radio.
+The normal FPP Status page shows one compact bubble per enabled overlay: **target name, effect/look name, Stop**. This includes solid colors, static Text and Image, and running animations on models, submodels, and groups. **Stop shown** appears when several looks are listed. Stopping the last overlay hides the entire panel; there is no empty heading or placeholder. The display works while a sequence is running and coexists with After Show Hours Radio.
 
-The source is FPP’s actual `/api/overlays/running` response, so an effect started elsewhere also appears. A solid/static fill is not a running effect in FPP’s API and does not create a bubble; use **Stop selected** in this plugin to release a fill. Normal refresh is approximately 3 seconds while active and 8 seconds while idle. Polling pauses in a hidden browser tab.
+Visibility follows FPP’s live `/api/overlays/models` state. Successful commands save a small label for each target so solid fills and static Text/Image keep their effect names after you leave the plugin page. Native running effect names take precedence. Existing fills started before this update appear as **Solid / static overlay** until their next Apply; no reapply is needed just to see or stop them. Saved history alone never creates a bubble for disabled output, and label-storage failures do not hide active targets. Normal refresh is approximately 3 seconds while active and 8 seconds while idle. Polling pauses in a hidden browser tab.
 
 ### Presets and favorites
 
 Click a star to favorite an effect. Enter a preset name and **Save preset** to save its targets, visibility, color, and parameters. Saving an existing name replaces that preset. **Load** a preset, review its current targets, then Apply. Missing models are reported; unavailable effects are rejected. Presets store parameters by name and are rebuilt against the current FPP schema.
 
-Settings are in `config/plugin.FPP-Overlay-Effects.json`. If this file cannot be read, saving is disabled so existing presets cannot be overwritten accidentally. A visible save indicator reports write failures.
+Settings are in `config/plugin.FPP-Overlay-Effects.json`; last successful look labels use `config/plugin.FPP-Overlay-Effects.activity.json`. Activity labels are separate from presets and are updated with a file lock and atomic replacement. If the settings file cannot be read, saving is disabled so existing presets cannot be overwritten accidentally. A visible save indicator reports write failures.
 
 ### MultiSync
 
@@ -86,6 +86,7 @@ Development checks (Node/Playwright are not required on the FPP):
 npm ci
 npm test
 php tests/model-index.php
+php tests/activity.php
 npx playwright install chromium
 npm run test:ui
 ```

@@ -25,6 +25,7 @@ jobs:
         run: |
           find . -name '*.php' -not -path './node_modules/*' -print0 | xargs -0 -n1 php -l
           php tests/model-index.php
+          php tests/activity.php
       - name: Install browser
         run: npx playwright install --with-deps chromium
       - name: Desktop, phone, and Status integration

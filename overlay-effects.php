@@ -1,5 +1,5 @@
-<link rel="stylesheet" href="plugin.php?plugin=FPP-Overlay-Effects&amp;file=assets/overlay-effects.css&amp;nopage=1&amp;v=1.0.0">
-<div id="foe" class="foe" data-version="1.0.0">
+<link rel="stylesheet" href="plugin.php?plugin=FPP-Overlay-Effects&amp;file=assets/overlay-effects.css&amp;nopage=1&amp;v=1.0.1">
+<div id="foe" class="foe" data-version="1.0.1">
   <header class="foe-header">
     <div class="foe-brand"><span class="foe-logo" aria-hidden="true">◉</span><div><strong>OVERLAY EFFECTS</strong><span>FPP native light control</span></div></div>
     <div class="foe-header-actions"><span id="foe-connection" class="foe-pill" role="status">Connecting…</span><button id="foe-refresh" type="button" title="Refresh effects, models, and port configuration">↻ <span>Refresh</span></button><a class="foe-icon-link" href="plugin.php?plugin=FPP-Overlay-Effects&amp;page=help/overlay-effects.php" title="Usage guide">?</a></div>
@@ -45,7 +45,7 @@
     </section>
     <section class="foe-card foe-preset-card" data-section="presets"><div class="foe-card-heading"><h3>Presets</h3><span class="foe-muted">Saved on this FPP</span></div><div class="foe-preset-save"><label class="foe-sr-only" for="foe-preset-name">Preset name</label><input id="foe-preset-name" type="text" maxlength="80" placeholder="Name this look…"><button id="foe-preset-save" class="foe-primary" type="button" disabled>+ Save preset</button></div><div id="foe-presets" class="foe-presets"></div><p class="foe-help">Load a preset to review its targets and values, then press Apply. Loading a page or preset never starts lights.</p></section>
   </div>
-  <footer class="foe-footer"><span id="foe-save-status" role="status">Settings ready</span><span>FPP Overlay Effects <span id="foe-version">1.0.0</span> · <a href="https://github.com/ravenridgelights-turtle/FPP-Overlay-Effects/releases" target="_blank" rel="noopener">Releases & help ↗</a></span></footer>
+  <footer class="foe-footer"><span id="foe-save-status" role="status">Settings ready</span><span>FPP Overlay Effects <span id="foe-version">1.0.1</span> · <a href="https://github.com/ravenridgelights-turtle/FPP-Overlay-Effects/releases" target="_blank" rel="noopener">Releases & help ↗</a></span></footer>
 </div>
-<script src="plugin.php?plugin=FPP-Overlay-Effects&amp;file=assets/core.js&amp;nopage=1&amp;v=1.0.0"></script>
-<script src="plugin.php?plugin=FPP-Overlay-Effects&amp;file=assets/app.js&amp;nopage=1&amp;v=1.0.0"></script>
+<script src="plugin.php?plugin=FPP-Overlay-Effects&amp;file=assets/core.js&amp;nopage=1&amp;v=1.0.1"></script>
+<script src="plugin.php?plugin=FPP-Overlay-Effects&amp;file=assets/app.js&amp;nopage=1&amp;v=1.0.1"></script>

@@ -9,7 +9,7 @@ Source reviewed: FalconChristmas/fpp `v10.4`, commit `123b8ca089b98a54f7f5c0b7ee
 | Effect names | GET `api/overlays/effects` | `PixelOverlay.cpp` |
 | One effect’s ordered args | GET `api/overlays/effects/{encodedName}` | `Commands.cpp`, `Command::getDescription` |
 | Fonts / images / other choices | Same-origin `contentListUrl` declared by each argument | `CommandArg` metadata |
-| Running-effect bubbles | GET `api/overlays/running`, each `{Name, effect:{name,...}}` | `PixelOverlayManager::getActiveOverlayEffects` |
+| Active-look bubbles | GET `api/overlays/models`, using `isActive`, `effectRunning`, and `effectName` | `PixelOverlayManager::render_GET` |
 | Run native effect | POST `api/command`, `command: "Overlay Model Effect"`, `args: [names, visibility, effect, ...orderedValues]` | `ApplyEffectOverlayCommand` |
 | Solid fill | `Overlay Model Fill`, `[names, state, "#RRGGBB[WW]"]` | `FillOverlayCommand` |
 | Stop and release | `Overlay Model Effect`, `[names, "Enabled", "Stop Effects"]` | `StopEffect` and auto-disable |
@@ -22,4 +22,8 @@ Command success bodies can be **text/plain**. Do not force JSON parsing on them.
 
 `PixelOverlayModel.cpp` derives logical `ColorOrder` from node width. `src/channeloutput/PixelString.cpp` applies the actual hardware order: incoming data is RGB/RGBW. Virtual-string starts are **zero-based**, ordinary model StartChannel is **one-based**, grouping reduces the consumed source nodes, and null pixels do not consume source channels. The browser must never pre-permute color bytes for a GRB/WRGB string.
 
-FPP 10.4 retires old effects during fill. This plugin therefore sends the native Fill command directly, without the old stop/poll/fill sequence that could race an asynchronous stop. Status bubbles use only the running API: enabled static overlays are not mislabeled as running animations.
+FPP 10.4 retires old effects during fill. This plugin therefore sends the native Fill command directly, without the old stop/poll/fill sequence that could race an asynchronous stop.
+
+Status bubbles follow the enabled state of all live overlay models, including materialized submodels and groups. `/api/overlays/running` omits static fills and finished static Text/Image objects, so it is insufficient for this display. `assets/status-state.js` merges live state with last successful command labels. Disabled output is always omitted; native running names override history, and transitional Stop Effects records are omitted.
+
+`activity.php` GET/POST stores only target names, look names, optional fill colors, and update timestamps in a separate plugin-owned activity JSON. POST requires JSON. Updates use a stable lock and atomic replacement so different tabs cannot lose each other’s target labels. The controller records labels after a local command succeeds, never on selection, preset recall, failed commands, or unacknowledged remote sends. Stops clear only their target labels. Live state, not the label file, determines whether any bubble exists. Missing/failed activity reads fall back to generic static labels without hiding active lights.

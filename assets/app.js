@@ -4,6 +4,7 @@
     const root=document.getElementById('foe'); if(!root) return;
     const C=window.FOECore, $=id=>document.getElementById('foe-'+id);
     const CONFIG='api/configfile/plugin.FPP-Overlay-Effects.json';
+    const ACTIVITY='plugin.php?plugin=FPP-Overlay-Effects&page=activity.php&nopage=1';
     const state={config:C.freshConfig(),models:[],effects:[],index:{models:[],profiles:[]},schema:null,values:[],slot:0,
         connected:false,loading:false,busy:0,armed:false,configReady:false,loadId:0,effectFilter:'all',modelFilter:'all',systems:[],warnings:[]};
     const queue=new C.CommandQueue(); let liveTimer,saveTimer,saveChain=Promise.resolve(),pollTimer;
@@ -11,8 +12,8 @@
     function el(tag,cls,text){const n=document.createElement(tag);if(cls)n.className=cls;if(text!=null)n.textContent=text;return n;}
     function button(label,cls,fn){const b=el('button',cls,label);b.type='button';b.addEventListener('click',fn);return b;}
     function notice(message,kind='info'){$('notice').textContent=message;$('notice').dataset.kind=kind;}
-    async function request(path,options={},json=true){
-        const abort=new AbortController(),timeout=setTimeout(()=>abort.abort(),12000);
+    async function request(path,options={},json=true,timeoutMs=12000){
+        const abort=new AbortController(),timeout=setTimeout(()=>abort.abort(),timeoutMs);
         try {
             const response=await fetch(path,{cache:'no-store',credentials:'same-origin',...options,signal:abort.signal});
             const raw=await response.text(); let data;
@@ -71,12 +72,21 @@
     async function postCommand(command){
         const data=await request('api/command',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(command)},false);
         if(typeof data==='string' && /^(error\b|no command\b|could not\b|no model found\b)/i.test(data.trim()))throw new Error(data);
+        if(command.multisyncCommand)return true;
+        // FPP has no running-effect record for a fill or a finished static Text/Image.
+        // Save a label only after native output succeeds; live FPP state decides visibility.
+        const models=command.args[0].split(','),fill=command.command==='Overlay Model Fill',stop=command.args[2]==='Stop Effects';
+        const activity=stop?{action:'clear',models}:{action:'apply',models,effect:fill?C.SOLID:command.args[2],color:fill?command.args[2]:''};
+        try {await request(ACTIVITY,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(activity)},true,3000);return true;}
+        catch(_){return false;} // Output is already applied. Status can fall back to a generic static label.
     }
     async function sendCommands(commands,hosts){
+        let labelsSaved=true;
         for(const command of commands){
-            await postCommand(command);
+            if(!await postCommand(command))labelsSaved=false;
             if(hosts.length)await postCommand({...command,multisyncCommand:true,multisyncHosts:hosts.join(',')});
         }
+        return labelsSaved;
     }
     async function apply(live=false){
         clearTimeout(liveTimer);const error=readyError();if(error){if(!live)notice(error,'error');return;}
@@ -95,7 +105,7 @@
         try{
             await queue.enqueue(async()=>{
                 state.busy++;updateButtons();notice('Applying '+label+'…');
-                try{await sendCommands(commands,hosts);notice(label+' applied to '+models.length+' local target'+(models.length===1?'':'s')+(hosts.length?'; MultiSync commands sent (remote delivery is unacknowledged).':'.'),'success');}
+                try{const saved=await sendCommands(commands,hosts);notice(label+' applied to '+models.length+' local target'+(models.length===1?'':'s')+(hosts.length?'; MultiSync commands sent (remote delivery is unacknowledged).':'.')+(saved?'':' Static Status labels could not be saved; active overlays still appear.'),'success');}
                 finally{state.busy--;updateButtons();}
                 return true;
             },live?'live':'manual');

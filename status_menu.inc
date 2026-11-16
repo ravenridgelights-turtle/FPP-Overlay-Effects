@@ -4,8 +4,10 @@
 // No core FPP file or native player-status value is changed.
 if (basename($_SERVER['SCRIPT_NAME'] ?? $_SERVER['PHP_SELF'] ?? '') === 'index.php') {
     $foeStatusRef = substr(hash_file('sha256', __DIR__ . '/assets/status.js'), 0, 12);
+    $foeStateRef = substr(hash_file('sha256', __DIR__ . '/assets/status-state.js'), 0, 12);
     $foeStyleRef = substr(hash_file('sha256', __DIR__ . '/assets/status.css'), 0, 12);
     echo '<link rel="stylesheet" href="plugin.php?plugin=FPP-Overlay-Effects&amp;file=assets/status.css&amp;nopage=1&amp;ref=' . $foeStyleRef . '">';
+    echo '<script defer src="plugin.php?plugin=FPP-Overlay-Effects&amp;file=assets/status-state.js&amp;nopage=1&amp;ref=' . $foeStateRef . '"></script>';
     echo '<script defer src="plugin.php?plugin=FPP-Overlay-Effects&amp;file=assets/status.js&amp;nopage=1&amp;ref=' . $foeStatusRef . '"></script>';
 }
 ?>
